@@ -1,0 +1,51 @@
+name: host-probe
+on: [workflow_dispatch]
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26, macos-15-intel, macos-15, macos-26]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: identity
+        run: |
+          set +e
+          sysctl hw.model hw.target hw.product kern.hv_vmm_present kern.hv_support machdep.cpu.brand_string hw.ncpu hw.memsize kern.boottime 2>/dev/null
+          ioreg -l -p IODeviceTree -d 2 | grep -E '"(model|compatible|manufacturer|product-name|target-type|board-id)"' | head -20
+          ioreg -rd1 -c IOPlatformExpertDevice | grep -E 'model|manufacturer|product|target|board|UUID' | head -20
+      - name: virtualization layer
+        run: |
+          set +e
+          ioreg -l | grep -ioE 'virtio[a-z-]*|AppleVirtIO[a-zA-Z]*|VirtualMac[0-9,]*|Anka[a-zA-Z]*|Veertu|Parallels[a-zA-Z]*|VMware[a-zA-Z]*|AppleParavirt[a-zA-Z]*' | sort | uniq -c | sort -rn | head -30
+          kextstat 2>/dev/null | grep -iE 'virt|anka|vmware|parallels' | head
+          ls /Library/Application\ Support/ | head -40
+          ps -axo comm | grep -iE 'anka|orka|veertu|vmware|parallels|tart|guest' | sort -u
+      - name: disk device
+        run: |
+          set +e
+          system_profiler SPStorageDataType SPNVMeDataType 2>/dev/null | grep -vE 'Serial Number' | head -60
+          ioreg -r -c IOBlockStorageDevice -l | grep -E '"(Product Name|Vendor Name|Physical Block Size|Logical Block Size|Device Characteristics|Protocol Characteristics|Product Identification|Medium Type)"' | head -30
+          diskutil info disk0 | grep -E 'Device / Media|Protocol|Disk Size|Block Size|Solid State|Virtual|Location|Removable'
+      - name: disk speed
+        run: |
+          set +e
+          cd $RUNNER_TEMP
+          dd if=/dev/zero of=big.bin bs=8m count=1024 2>&1 | tail -1
+          sudo purge
+          dd if=big.bin of=/dev/null bs=8m 2>&1 | tail -1
+          python3 -c "
+          import os,random,time
+          f=os.open('big.bin',os.O_RDONLY); sz=os.fstat(f).st_size; n=20000; t=time.time()
+          for _ in range(n): os.pread(f,4096,random.randrange(0,sz//4096)*4096)
+          print('random 4k read IOPS', int(n/(time.time()-t)))
+          "
+          rm -f big.bin
+      - name: network location
+        run: |
+          set +e
+          curl -s -m 10 https://ipinfo.io/json | grep -vE '"(ip|hostname|loc|postal)"'
+          ifconfig | grep -E '^[a-z]|inet ' | head -20
+          route -n get default | grep -E 'gateway|interface'
+          traceroute -n -m 4 -w 1 -q 1 8.8.8.8 2>&1 | head -6
