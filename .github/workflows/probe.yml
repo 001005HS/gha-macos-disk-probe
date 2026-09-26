@@ -1,0 +1,32 @@
+name: disk-probe
+on: [workflow_dispatch]
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - name: machine
+        run: |
+          sw_vers; uname -m; sysctl -n hw.ncpu hw.memsize machdep.cpu.brand_string
+          system_profiler SPHardwareDataType | grep -E 'Model|Chip|Memory|Cores' || true
+      - name: disk layout
+        run: |
+          df -h
+          echo "== diskutil list"; diskutil list
+          echo "== apfs"; diskutil apfs list | grep -E 'Container|Capacity|Volume|Name|Role|Consumed' | head -80
+      - name: xcode and runtime sizes
+        run: |
+          ls -d /Applications/Xcode*.app
+          for x in /Applications/Xcode_*.app; do [ -L "$x" ] && continue; du -sh "$x" 2>/dev/null; done
+          echo "== simulator runtimes"; xcrun simctl runtime list -v 2>/dev/null | head -60 || true
+          sudo du -sh /Library/Developer/CoreSimulator 2>/dev/null || true
+          df -h /Library/Developer/CoreSimulator/Volumes/* 2>/dev/null || true
+      - name: top-level usage
+        run: |
+          sudo du -xsh /Applications /Library /opt /usr/local /Users /System/Volumes/Data/private 2>/dev/null || true
+          sudo du -xsh $HOME/hostedtoolcache $RUNNER_TOOL_CACHE 2>/dev/null || true
+          echo "ImageOS=$ImageOS ImageVersion=$ImageVersion"
