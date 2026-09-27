@@ -5,7 +5,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-15, macos-26, macos-15-intel, macos-15, macos-26]
+        os: [xeno-macos-m4, xeno-macos-m4, xeno-macos-m4, xeno-macos-m4, xeno-macos-m4]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
