@@ -1,8 +1,0 @@
-name: paid-only-probe
-on: [workflow_dispatch]
-jobs:
-  probe:
-    runs-on: xenoci-macos
-    timeout-minutes: 5
-    steps:
-      - run: echo PAID_ONLY_PROBE_OK && sw_vers
