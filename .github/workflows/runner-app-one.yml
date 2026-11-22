@@ -1,0 +1,1 @@
+name: runner-app-one\non: push\njobs:\n  mac:\n    runs-on: xenoci-macos\n    timeout-minutes: 20\n    steps:\n      - run: sw_vers && uname -m && echo "XenoCI-Runner Dev personal install 184782859"\n
