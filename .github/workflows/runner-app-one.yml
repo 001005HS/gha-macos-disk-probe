@@ -5,4 +5,4 @@ jobs:
     runs-on: xenoci-macos
     timeout-minutes: 20
     steps:
-      - run: sw_vers && uname -m && echo "XenoCI-Runner Dev personal install 184782859"
+      - run: sw_vers && uname -m && echo "XenoCI-Runner Dev personal install after reinstall"
